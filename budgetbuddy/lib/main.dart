@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:budgetbuddy/colorscheme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'screens/home/homescreen.dart';
+import 'main_nav_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +22,21 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Budget Buddy',
       theme: ThemeData(colorScheme: AppColorScheme.colorScheme),
-      home: const WelcomeScreen(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasData) {
+            return const MainNavScreen();
+          } else {
+            return const WelcomeScreen();
+          }
+        },
+      ),
     );
   }
 }

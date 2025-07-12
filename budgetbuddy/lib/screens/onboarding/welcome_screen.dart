@@ -137,13 +137,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         title: 'Budget Tracker',
                         subtitle: 'Insightful budget tracker to help you hit your goals',
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
                       _buildFeatureItem(
                         icon: Icons.psychology_rounded,
                         title: 'Entertaining Education',
                         subtitle: 'Learn the essentials of finance through short stories',
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
                       _buildFeatureItem(
                         icon: Icons.chat_bubble_outline,
                         title: 'Personal Tutor',

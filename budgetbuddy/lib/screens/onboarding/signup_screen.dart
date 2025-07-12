@@ -1,5 +1,8 @@
+import 'package:budgetbuddy/screens/home/homescreen.dart';
 import 'package:flutter/material.dart';
 import '../../colorscheme.dart';
+import '../../services/firebase_service.dart';
+import '../../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -138,16 +141,28 @@ class _SignupScreenState extends State<SignupScreen>
     });
 
     try {
-       // Simulate API call
-
+      // Firebase signup
+      final registered = await ApiService().registerUser(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+      );
+      await FirebaseService().signUpWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+      // Backend registration
+      if (!registered) {
+        throw Exception('Backend registration failed');
+      }
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/onboarding/interests');
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
       }
     } catch (e) {
       if (mounted) {
+        print(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Signup failed: ${e.toString()}'),
+            content: Text('Signup failed:  [${e.toString()}'),
             backgroundColor: AppColorScheme.error,
           ),
         );

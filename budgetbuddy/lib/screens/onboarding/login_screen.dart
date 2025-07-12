@@ -1,6 +1,9 @@
+import 'package:budgetbuddy/screens/home/homescreen.dart';
 import 'package:flutter/material.dart';
 import '../../colorscheme.dart';
 import 'signup_screen.dart';
+import '../../services/api_service.dart';
+import '../../services/firebase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,26 +30,26 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
-    
+
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
-        );
-    
+      CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+    );
+
     _fadeController.forward();
     _slideController.forward();
   }
@@ -93,11 +96,21 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      // TODO: Implement Firebase login logic here
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
-      
+      // Email/Password login
+
+
+      await FirebaseService().loginWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+      // Save token/user info if needed
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        throw Exception('Login failed');
       }
     } catch (e) {
       if (mounted) {
@@ -227,7 +240,8 @@ class _LoginScreenState extends State<LoginScreen>
                           GestureDetector(
                             onTap: () {
                               // Navigate to forgot password screen
-                              Navigator.pushNamed(context, '/auth/forgot-password');
+                              Navigator.pushNamed(
+                                  context, '/auth/forgot-password');
                             },
                             child: const Text(
                               'Forgot Password?',
@@ -317,7 +331,30 @@ class _LoginScreenState extends State<LoginScreen>
                               icon: 'assets/icons/google_icon.png',
                               label: 'Google',
                               onPressed: () {
-                                // TODO: Implement Google login
+                                // Google Sign-In
+                                /* try {
+                                  final user =
+                                      FirebaseService.signInWithGoogle();
+                                  if (user != null) {
+                                    // Optionally send user.idToken to your backend for verification
+                                    if (mounted) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const HomeScreen()),
+                                      );
+                                    }
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Google sign-in failed: $e'),
+                                      backgroundColor:
+                                          AppColorScheme.error,
+                                    ),
+                                  );
+                                } */
                               },
                             ),
                           ),
@@ -327,7 +364,30 @@ class _LoginScreenState extends State<LoginScreen>
                               icon: 'assets/icons/apple_icon.png',
                               label: 'Apple',
                               onPressed: () {
-                                // TODO: Implement Apple login
+                                // Apple Sign-In
+                                /* try {
+                                  final user =
+                                      FirebaseService.signInWithApple();
+                                  if (user != null) {
+                                    // Optionally send user.idToken to your backend for verification
+                                    if (mounted) {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const HomeScreen()),
+                                      );
+                                    }
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Apple sign-in failed: $e'),
+                                      backgroundColor:
+                                          AppColorScheme.error,
+                                    ),
+                                  );
+                                } */
                               },
                             ),
                           ),

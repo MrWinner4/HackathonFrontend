@@ -200,7 +200,7 @@ class _SignupScreenState extends State<SignupScreen>
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Start your learning journey today',
+                        'Start saving today',
                         style: TextStyle(
                           fontSize: 16,
                           color: AppColorScheme.secondaryVariant,

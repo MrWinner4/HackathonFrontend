@@ -100,7 +100,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       
                       // App Name
                       const Text(
-                        'EduFlow',
+                        'Budget Buddy',
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
@@ -134,20 +134,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     children: [
                       _buildFeatureItem(
                         icon: Icons.trending_up_rounded,
-                        title: 'Personalized Learning',
-                        subtitle: 'AI-powered content tailored to your goals',
+                        title: 'Budget Tracker',
+                        subtitle: 'Insightful budget tracker to help you hit your goals',
                       ),
                       const SizedBox(height: 20),
                       _buildFeatureItem(
                         icon: Icons.psychology_rounded,
-                        title: 'Smart Skills',
-                        subtitle: 'Master finance, productivity & wellness',
+                        title: 'Entertaining Education',
+                        subtitle: 'Learn the essentials of finance through short stories',
                       ),
                       const SizedBox(height: 20),
                       _buildFeatureItem(
-                        icon: Icons.camera_alt_rounded,
-                        title: 'Entertaining Stories',
-                        subtitle: 'Learn essential life skills through engaging stories',
+                        icon: Icons.chat_bubble_outline,
+                        title: 'Personal Tutor',
+                        subtitle: 'AI Chatbot catered to your questions and needs',
                       ),
                     ],
                   ),

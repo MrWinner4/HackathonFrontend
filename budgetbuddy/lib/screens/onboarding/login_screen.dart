@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Sign in to continue your learning journey',
+                        'Sign in to continue your saving journey',
                         style: TextStyle(
                           fontSize: 16,
                           color: AppColorScheme.secondaryVariant,

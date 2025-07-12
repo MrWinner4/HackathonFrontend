@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "439060117531",
+    "project_id": "hackathon-fd750",
+    "storage_bucket": "hackathon-fd750.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:439060117531:android:f3342551953e5f9f0b60be",
+        "android_client_info": {
+          "package_name": "com.example.budgetbuddy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwvRX91iSCDuyn5TenRMH0qmMmnqAf6vg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

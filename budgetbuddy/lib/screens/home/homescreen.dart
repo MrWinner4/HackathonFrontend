@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../colorscheme.dart';
+import '../content/content_demo.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -13,23 +14,19 @@ class HomeScreen extends StatelessWidget {
       {'name': 'Vacation', 'progress': 0.4, 'price': 1200.0},
       {'name': 'Laptop', 'progress': 0.2, 'price': 900.0},
     ];
-    final List<Map<String, String>> lessons = [
-      {
-        'emoji': '💡',
-        'title': 'Saving Basics',
-        'subtitle': 'Start your journey'
-      },
-      {
-        'emoji': '📊',
-        'title': 'Budgeting 101',
-        'subtitle': 'Master your money'
-      },
-      {'emoji': '🛒', 'title': 'Smart Spending', 'subtitle': 'Spend wisely'},
-    ];
     final List<Map<String, String>> quickActions = [
       {'label': 'Add Goal', 'icon': 'add_circle_outline'},
       {'label': 'Edit Goals', 'icon': 'remove_circle_outline'},
     ];
+
+    void _showAddGoalSheet(BuildContext context) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => const _AddGoalSheet(),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColorScheme.background,
@@ -42,6 +39,7 @@ class HomeScreen extends StatelessWidget {
         tooltip: 'Add Transaction',
       ),
       body: SafeArea(
+        bottom: true,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -180,78 +178,27 @@ class HomeScreen extends StatelessWidget {
                   return _QuickActionPill(
                     label: action['label']!,
                     icon: action['icon']!,
-                    onTap: () {},
+                    onTap: () {
+                      if (action['label'] == 'Add Goal') {
+                        _showAddGoalSheet(context);
+                      } else if (action['label'] == 'Content Demo') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ContentDemoScreen(),
+                          ),
+                        );
+                      }
+                    },
                   );
                 }).toList(),
               ),
             ),
             const SizedBox(height: 32),
             // Lessons/Stories Carousel
-            Padding(
-              padding: const EdgeInsets.only(left: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Learn',
-                    style: TextStyle(
-                      color: AppColorScheme.secondary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 150,
-                    child: PageView.builder(
-                      controller: PageController(viewportFraction: 0.8),
-                      itemCount: lessons.length,
-                      itemBuilder: (context, i) {
-                        final lesson = lessons[i];
-                        return _LessonCard(
-                          emoji: lesson['emoji']!,
-                          title: lesson['title']!,
-                          subtitle: lesson['subtitle']!,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 48),
-            Padding(
-              padding: const EdgeInsets.only(left: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Episodes',
-                    style: TextStyle(
-                      color: AppColorScheme.secondary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 150,
-                    child: PageView.builder(
-                      controller: PageController(viewportFraction: 0.8),
-                      itemCount: lessons.length,
-                      itemBuilder: (context, i) {
-                        final lesson = lessons[i];
-                        return _LessonCard(
-                          emoji: lesson['emoji']!,
-                          title: lesson['title']!,
-                          subtitle: lesson['subtitle']!,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // (Removed demo/filler content)
+            // Episodes Carousel
+            // (Removed demo/filler content)
             const SizedBox(height: 48),
           ],
         ),
@@ -434,6 +381,181 @@ class _LessonCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AddGoalSheet extends StatefulWidget {
+  const _AddGoalSheet({Key? key}) : super(key: key);
+
+  @override
+  State<_AddGoalSheet> createState() => _AddGoalSheetState();
+}
+
+class _AddGoalSheetState extends State<_AddGoalSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  String _emoji = '🎯';
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() ?? false) {
+      setState(() => _isSubmitting = true);
+      // Simulate a save, then pop
+      Future.delayed(const Duration(milliseconds: 600), () {
+        Navigator.of(context).pop();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 200),
+      padding: mq.viewInsets,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 24,
+                offset: const Offset(0, -8),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 48,
+                  height: 6,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                Text(
+                  'Add a New Goal',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColorScheme.secondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                GestureDetector(
+                  onTap: () async {
+                    // Show emoji picker (simple for now)
+                    final emojis = ['🎯', '🚲', '🏖️', '💻', '🎸', '🏆', '📚', '🎮', '🏠', '🚗'];
+                    final selected = await showModalBottomSheet<String>(
+                      context: context,
+                      backgroundColor: Colors.white,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (context) => GridView.count(
+                        crossAxisCount: 5,
+                        shrinkWrap: true,
+                        children: emojis.map((e) => InkWell(
+                          onTap: () => Navigator.of(context).pop(e),
+                          child: Center(child: Text(e, style: const TextStyle(fontSize: 28))),
+                        )).toList(),
+                      ),
+                    );
+                    if (selected != null) setState(() => _emoji = selected);
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColorScheme.accent.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(18),
+                    child: Text(_emoji, style: const TextStyle(fontSize: 36)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextFormField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.sentences,
+                  cursorColor: AppColorScheme.accent,
+                  decoration: InputDecoration(
+                    labelText: 'Goal Name',
+                    prefixIcon: const Icon(Icons.flag_outlined),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Enter a goal name' : null,
+                ),
+                const SizedBox(height: 18),
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  cursorColor: AppColorScheme.accent,
+                  decoration: InputDecoration(
+                    labelText: 'Target Amount',
+                    prefixIcon: const Icon(Icons.attach_money_rounded),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Enter an amount';
+                    final n = double.tryParse(v);
+                    if (n == null || n <= 0) return 'Enter a valid amount';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColorScheme.accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      elevation: 2,
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Add Goal'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

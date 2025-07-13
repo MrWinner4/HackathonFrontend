@@ -1,5 +1,10 @@
+import 'package:budgetbuddy/constants/app_constants.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../../colorscheme.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:provider/provider.dart';
+import '../../providers/chat_provider.dart';
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({Key? key}) : super(key: key);
@@ -9,10 +14,9 @@ class ChatbotPage extends StatefulWidget {
 }
 
 class _ChatbotPageState extends State<ChatbotPage> {
-  final List<_ChatMessage> _messages = [];
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isLoading = false;
+  final Dio _dio = Dio();
 
   @override
   void dispose() {
@@ -23,20 +27,27 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _isLoading) return;
-    setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
-      _isLoading = true;
-      _controller.clear();
-    });
+    if (text.isEmpty) return;
+    
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    
+    // Add user message
+    await chatProvider.addMessage(text, true);
+    _controller.clear();
+    
+    // Set loading state
+    chatProvider.setLoading(true);
+    
     await Future.delayed(const Duration(milliseconds: 100));
     _scrollToBottom();
-    // Simulate API call
+    
+    // Fetch AI response
     final response = await _fetchChatbotResponse(text);
-    setState(() {
-      _messages.add(_ChatMessage(text: response, isUser: false));
-      _isLoading = false;
-    });
+    
+    // Add AI response
+    await chatProvider.addMessage(response, false);
+    chatProvider.setLoading(false);
+    
     await Future.delayed(const Duration(milliseconds: 100));
     _scrollToBottom();
   }
@@ -52,9 +63,21 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   Future<String> _fetchChatbotResponse(String prompt) async {
-    // TODO: Replace with real API call
-    await Future.delayed(const Duration(seconds: 1));
-    return "I'm your finance buddy! (This is a placeholder response.)";
+    try {
+      final response = await _dio.post(
+        backendBaseUrl + '/chatbot/ask',
+        data: {'message': prompt},
+      );
+      // The backend returns: { "response": "..." }
+      return response.data['response'] ?? "No response from server.";
+    } catch (e) {
+      return "Error: $e";
+    }
+  }
+
+  void _clearChat() async {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    await chatProvider.clearMessages();
   }
 
   @override
@@ -72,7 +95,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   CircleAvatar(
                     radius: 28,
                     backgroundColor: AppColorScheme.accent.withOpacity(0.15),
-                    child: const Icon(Icons.smart_toy_rounded, size: 32, color: AppColorScheme.accent),
+                    child: const Icon(Icons.smart_toy_rounded,
+                        size: 32, color: AppColorScheme.accent),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -98,67 +122,93 @@ class _ChatbotPageState extends State<ChatbotPage> {
                       ],
                     ),
                   ),
+                  // Clear chat button
                 ],
               ),
             ),
-            // Chat area in a card
+            // Chat area
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, i) {
-                      final msg = _messages[i];
-                      return Align(
-                        alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 18),
-                          decoration: BoxDecoration(
-                            color: msg.isUser ? AppColorScheme.accent : AppColorScheme.primaryVariant.withOpacity(0.7),
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(18),
-                              topRight: const Radius.circular(18),
-                              bottomLeft: Radius.circular(msg.isUser ? 18 : 4),
-                              bottomRight: Radius.circular(msg.isUser ? 4 : 18),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+              child: Container(
+                color: Colors.white.withOpacity(0.95),
+                child: Consumer<ChatProvider>(
+                  builder: (context, chatProvider, child) {
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+                      itemCount: chatProvider.messages.length,
+                      itemBuilder: (context, i) {
+                        final msg = chatProvider.messages[i];
+                        return Align(
+                          alignment: msg.isUser
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 18),
+                            decoration: BoxDecoration(
+                              color: msg.isUser
+                                  ? AppColorScheme.accent
+                                  : AppColorScheme.primaryVariant.withOpacity(0.7),
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(18),
+                                topRight: const Radius.circular(18),
+                                bottomLeft: Radius.circular(msg.isUser ? 18 : 4),
+                                bottomRight: Radius.circular(msg.isUser ? 4 : 18),
                               ),
-                            ],
-                          ),
-                          child: Text(
-                            msg.text,
-                            style: TextStyle(
-                              color: msg.isUser ? Colors.white : AppColorScheme.secondary,
-                              fontSize: 16,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
+                            child: msg.isUser
+                                ? Text(
+                                    msg.text,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  )
+                                : MarkdownBody(
+                                    data: msg.text,
+                                    styleSheet: MarkdownStyleSheet(
+                                      p: const TextStyle(
+                                        color: AppColorScheme.secondary,
+                                        fontSize: 16,
+                                      ),
+                                      strong: const TextStyle(
+                                        color: AppColorScheme.secondary,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      em: const TextStyle(
+                                        color: AppColorScheme.secondary,
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                      code: TextStyle(
+                                        color: AppColorScheme.accent,
+                                        fontSize: 16,
+                                        backgroundColor: AppColorScheme.accent.withOpacity(0.1),
+                                      ),
+                                      codeblockDecoration: BoxDecoration(
+                                        color: AppColorScheme.primaryVariant,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ),
-            // Input area in a card
+            // Input area
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               child: Container(
@@ -177,7 +227,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // Send button on the left
+                    // Send button
                     Container(
                       height: 44,
                       width: 44,
@@ -192,28 +242,39 @@ class _ChatbotPageState extends State<ChatbotPage> {
                           ),
                         ],
                       ),
-                      child: IconButton(
-                        icon: _isLoading
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.send_rounded, color: Colors.white),
-                        onPressed: _isLoading ? null : _sendMessage,
-                        splashRadius: 24,
+                      child: Consumer<ChatProvider>(
+                        builder: (context, chatProvider, child) {
+                          return IconButton(
+                            icon: chatProvider.isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.send_rounded, color: Colors.white),
+                            onPressed: chatProvider.isLoading ? null : _sendMessage,
+                            splashRadius: 24,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Text input on the right
+                    // Text input
                     Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        onSubmitted: (_) => _sendMessage(),
-                        textInputAction: TextInputAction.send,
-                        minLines: 1,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Type a message...'
-                        ),
-                        enabled: !_isLoading,
+                      child: Consumer<ChatProvider>(
+                        builder: (context, chatProvider, child) {
+                          return TextField(
+                            controller: _controller,
+                            onSubmitted: (_) => _sendMessage(),
+                            textInputAction: TextInputAction.send,
+                            minLines: 1,
+                            maxLines: 4,
+                            decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: 'Type a message...'),
+                            enabled: !chatProvider.isLoading,
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -226,9 +287,3 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 }
-
-class _ChatMessage {
-  final String text;
-  final bool isUser;
-  _ChatMessage({required this.text, required this.isUser});
-} 

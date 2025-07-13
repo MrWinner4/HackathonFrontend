@@ -1,40 +1,144 @@
+import 'package:budgetbuddy/constants/app_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../../colorscheme.dart';
+import '../../widgets/content/page_viewer.dart';
 import 'dart:math' as math;
+import '../../services/api_service.dart';
 
-class LessonsScreen extends StatelessWidget {
+class LessonsScreen extends StatefulWidget {
   const LessonsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final List<Map<String, String>> lessons = [
-      {
-        'emoji': '💡',
-        'title': 'Saving Basics',
-        'subtitle': 'Start your journey'
-      },
-      {
-        'emoji': '📊',
-        'title': 'Budgeting 101',
-        'subtitle': 'Master your money'
-      },
-      {
-        'emoji': '🛒',
-        'title': 'Smart Spending',
-        'subtitle': 'Spend wisely'
-      },
-      {
-        'emoji': '🏦',
-        'title': 'Banking Explained',
-        'subtitle': 'How banks work for you'
-      },
-      {
-        'emoji': '💳',
-        'title': 'Credit Cards',
-        'subtitle': 'Using credit responsibly'
-      },
-    ];
+  State<LessonsScreen> createState() => _LessonsScreenState();
+}
 
+class _LessonsScreenState extends State<LessonsScreen> {
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: backendBaseUrl,
+  ));
+  
+  bool _isLoading = false;
+  List<Map<String, dynamic>> _lessons = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLessons();
+    _testBackendConnection();
+  }
+
+  Future<void> _loadLessons() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {      // Using a test endpoint for now
+      final response = await _dio.get('/posts');
+      if (response.statusCode == 200) {
+        // Convert test data to lesson format
+        final testData = List<Map<String, dynamic>>.from(response.data);
+        setState(() {
+          _lessons = testData.take(5).map((post) => {
+            'title': post['title'],
+            'subtitle': post['body'].substring(0, 50) + '...',
+            'emoji': '📚',
+            'pages': [
+              {
+                'title': post['title'],
+                'content': post['body'],
+                'type': 'text'
+              }
+            ]
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading lessons: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _generateAndViewContent(String topic) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print("generate");
+      // Using a test endpoint for now
+      final response = await _dio.post(
+        '/posts',
+        data: {'title': 'Generated: $topic', 'body': 'This is a test lesson about $topic', 'userId': 1},
+      );
+      if (response.statusCode == 201) {
+        final lessonData = response.data;
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PageViewer(
+                pages: [
+                  {
+                    'title': lessonData['title'],
+                    'content': lessonData['body'],
+                    'type': 'text'
+                  }
+                ],
+                title: lessonData['title'],
+                emoji: '📚',
+                contentType: 'lesson',
+              ),
+            ),
+          );
+        }
+        // Reload lessons after generating new one
+        _loadLessons();
+      }
+    } catch (e) {
+      // Show error or fallback to sample data
+      if (mounted) {
+        print(e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error generating content: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _viewLesson(Map<String, dynamic> lesson) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PageViewer(
+          pages: List<Map<String, dynamic>>.from(lesson['pages']),
+          title: lesson['title'],
+          emoji: lesson['emoji'],
+          contentType: 'lesson',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _testBackendConnection() async {
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Removed hardcoded lessons list
+    // Only use real, dynamic content here
     // Example progress data
     final double overallProgress = 0.6;
     final List<_CategoryProgress> categories = [
@@ -45,7 +149,9 @@ class LessonsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColorScheme.background,
-      body: SafeArea(
+      body: Stack(
+        children: [
+          SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -189,21 +295,76 @@ class LessonsScreen extends StatelessWidget {
             const SizedBox(height: 8),
             // Lessons list
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                itemCount: lessons.length,
-                itemBuilder: (context, i) {
-                  final lesson = lessons[i];
-                  return _LessonCard(
-                    emoji: lesson['emoji']!,
-                    title: lesson['title']!,
-                    subtitle: lesson['subtitle']!,
-                  );
-                },
-              ),
+              child: _lessons.isEmpty && !_isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.menu_book_outlined,
+                          size: 64,
+                          color: AppColorScheme.secondaryVariant.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No lessons available yet',
+                          style: TextStyle(
+                            color: AppColorScheme.secondaryVariant,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap the button below to generate your first lesson!',
+                          style: TextStyle(
+                            color: AppColorScheme.secondaryVariant.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => _generateAndViewContent('budgeting basics'),
+                          icon: const Icon(Icons.auto_awesome),
+                          label: const Text('Generate First Lesson'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColorScheme.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    itemCount: _lessons.length,
+                    itemBuilder: (context, i) {
+                      final lesson = _lessons[i];
+                      return _LessonCard(
+                        emoji: lesson['emoji'],
+                        title: lesson['title'],
+                        subtitle: lesson['subtitle'],
+                        onTap: () => _viewLesson(lesson),
+                      );
+                    },
+                  ),
             ),
           ],
         ),
+      ),
+          // Loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColorScheme.accent),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -220,11 +381,17 @@ class _LessonCard extends StatelessWidget {
   final String emoji;
   final String title;
   final String subtitle;
-  const _LessonCard({required this.emoji, required this.title, required this.subtitle});
+  final VoidCallback? onTap;
+  const _LessonCard({
+    required this.emoji, 
+    required this.title, 
+    required this.subtitle,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget cardContent = Container(
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -274,5 +441,14 @@ class _LessonCard extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap != null) {
+      return GestureDetector(
+        onTap: onTap,
+        child: cardContent,
+      );
+    }
+    
+    return cardContent;
   }
 }

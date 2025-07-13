@@ -1,23 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../colorscheme.dart';
+import '../../providers/lesson_provider.dart';
+import '../../providers/episode_provider.dart';
+import '../../providers/progress_provider.dart';
+import '../../providers/user_provider.dart';
 import '../content/content_demo.dart';
+import '../lessons/lessons.dart';
+import '../chatbot/chatbot.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key, this.onViewProgress, this.onNavigateToLessons, this.onNavigateToChat}) : super(key: key);
+
+  final VoidCallback? onViewProgress;
+  final VoidCallback? onNavigateToLessons;
+  final VoidCallback? onNavigateToChat;
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    _fadeController.forward();
+    _slideController.forward();
+    
+    // Fetch user data when the screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserProvider>().fetchUserData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String userName = 'Alex';
-    final double balance = 1240.50;
-    final List<Map<String, dynamic>> goals = [
-      {'name': 'New Bike', 'progress': 0.7, 'price': 500.0},
-      {'name': 'Vacation', 'progress': 0.4, 'price': 1200.0},
-      {'name': 'Laptop', 'progress': 0.2, 'price': 900.0},
-    ];
-    final List<Map<String, String>> quickActions = [
-      {'label': 'Add Goal', 'icon': 'add_circle_outline'},
-      {'label': 'Edit Goals', 'icon': 'remove_circle_outline'},
-    ];
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+    final padding = screenWidth * 0.05; // 5% of screen width for padding
 
     void _showAddGoalSheet(BuildContext context) {
       showModalBottomSheet(
@@ -32,360 +92,1066 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: AppColorScheme.background,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColorScheme.accent,
-        foregroundColor: AppColorScheme.onAccent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         onPressed: () {},
-        child: const Icon(Icons.add, size: 32),
+        child: Icon(Icons.add, size: screenWidth * 0.07), // Responsive icon size
         tooltip: 'Add Transaction',
       ),
       body: SafeArea(
         bottom: true,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            // Top Section: Greeting & Balance
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColorScheme.accent.withOpacity(0.12),
-                      AppColorScheme.primaryVariant.withOpacity(0.7),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.all(Radius.circular(32)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColorScheme.accent.withOpacity(0.08),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: AppColorScheme.primaryVariant,
-                          child: const Icon(Icons.person,
-                              size: 32, color: AppColorScheme.secondary),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Refresh all providers
+            await context.read<LessonProvider>().refreshLessons();
+            await context.read<EpisodeProvider>().refreshEpisodes();
+            await context.read<ProgressProvider>().initialize();
+            await context.read<UserProvider>().fetchUserData();
+          },
+          color: AppColorScheme.accent,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                // Modern Hero Section with Glassmorphism
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: Container(
+                      margin: EdgeInsets.all(padding),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColorScheme.accent.withOpacity(0.12),
+                            AppColorScheme.primaryVariant.withOpacity(0.7),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        borderRadius: BorderRadius.circular(screenWidth * 0.07),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColorScheme.accent.withOpacity(0.08),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
+                          ),
+                        ],
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(screenWidth * 0.07),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withOpacity(0.15),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        padding: EdgeInsets.all(padding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(screenWidth * 0.03),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    size: screenWidth * 0.06,
+                                    color: AppColorScheme.secondary,
+                                  ),
+                                ),
+                                SizedBox(width: screenWidth * 0.04),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                                                              Text(
+                                          'Welcome back,',
+                                          style: TextStyle(
+                                            color: AppColorScheme.secondaryVariant,
+                                            fontSize: screenWidth * 0.04,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Consumer<UserProvider>(
+                                          builder: (context, userProvider, child) {
+                                            return Text(
+                                              userProvider.username,
+                                              style: TextStyle(
+                                                color: AppColorScheme.secondary,
+                                                fontSize: screenWidth * 0.06,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                                                  Container(
+                                    padding: EdgeInsets.all(screenWidth * 0.02),
+                                    decoration: BoxDecoration(
+                                      color: AppColorScheme.primaryVariant,
+                                      borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                                    ),
+                                    child: Icon(
+                                      Icons.notifications_outlined,
+                                      size: screenWidth * 0.05,
+                                      color: AppColorScheme.secondary,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            SizedBox(height: screenHeight * 0.02),
+                                                          Container(
+                                padding: EdgeInsets.all(screenWidth * 0.05),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                                  border: Border.all(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    width: 1,
+                                  ),
+                                ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Total Balance',
+                                          style: TextStyle(
+                                            color: AppColorScheme.secondaryVariant,
+                                            fontSize: screenWidth * 0.035,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        SizedBox(height: screenHeight * 0.005),
+                                        Consumer<UserProvider>(
+                                          builder: (context, userProvider, child) {
+                                            return Row(
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                TweenAnimationBuilder<double>(
+                                                  tween: Tween<double>(begin: 0, end: userProvider.balance),
+                                                  duration: const Duration(seconds: 1),
+                                                  builder: (context, value, child) => Text(
+                                                    '\$${value.toStringAsFixed(2)}',
+                                                    style: TextStyle(
+                                                      color: AppColorScheme.accent,
+                                                      fontSize: screenWidth * 0.07,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: -1,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                // Add/Subtract buttons
+                                                _BalanceActionButton(
+                                                  icon: Icons.add,
+                                                  color: Colors.green,
+                                                  onPressed: () async {
+                                                    final amount = await _showAmountDialog(context, 'Add to Savings');
+                                                    if (amount != null && amount > 0) {
+                                                      final userProvider = context.read<UserProvider>();
+                                                      userProvider.updateLocalBalance(userProvider.balance + amount);
+                                                      userProvider.updateBalance(userProvider.balance);
+                                                    }
+                                                  },
+                                                ),
+                                                const SizedBox(width: 4),
+                                                _BalanceActionButton(
+                                                  icon: Icons.remove,
+                                                  color: Colors.red,
+                                                  onPressed: () async {
+                                                    final amount = await _showAmountDialog(context, 'Subtract from Savings');
+                                                    if (amount != null && amount > 0) {
+                                                      final userProvider = context.read<UserProvider>();
+                                                      userProvider.updateLocalBalance(userProvider.balance - amount);
+                                                      userProvider.updateBalance(userProvider.balance);
+                                                    }
+                                                  },
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.all(screenWidth * 0.03),
+                                    decoration: BoxDecoration(
+                                      color: AppColorScheme.accent,
+                                      borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                                    ),
+                                    child: Icon(
+                                      Icons.trending_up_rounded,
+                                      color: Colors.white,
+                                      size: screenWidth * 0.05,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // AI Chat Feature Card
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: padding),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          if (widget.onNavigateToChat != null) {
+                            widget.onNavigateToChat!();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                        child: Container(
+                          padding: EdgeInsets.all(screenWidth * 0.05),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColorScheme.accent.withOpacity(0.1),
+                                AppColorScheme.accent.withOpacity(0.05),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(screenWidth * 0.05),
+                            border: Border.all(
+                              color: AppColorScheme.accent.withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                'Welcome back,',
-                                style: TextStyle(
-                                  color: AppColorScheme.secondaryVariant,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w400,
+                              Container(
+                                padding: EdgeInsets.all(screenWidth * 0.03),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColorScheme.accent,
+                                      AppColorScheme.accent.withOpacity(0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColorScheme.accent.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.smart_toy_rounded,
+                                  color: Colors.white,
+                                  size: screenWidth * 0.06,
                                 ),
                               ),
-                              Text(
-                                userName,
-                                style: TextStyle(
-                                  color: AppColorScheme.secondary,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
+                              SizedBox(width: screenWidth * 0.04),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'AI Financial Assistant',
+                                      style: TextStyle(
+                                        color: AppColorScheme.onPrimary,
+                                        fontSize: screenWidth * 0.045,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: screenHeight * 0.005),
+                                    Text(
+                                      'Get personalized financial advice and answers to your questions',
+                                      style: TextStyle(
+                                        color: AppColorScheme.secondaryVariant,
+                                        fontSize: screenWidth * 0.035,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: AppColorScheme.accent,
+                                size: screenWidth * 0.04,
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    // Animated Balance
-                    Text(
-                      'Total Balance',
-                      style: TextStyle(
-                        color: AppColorScheme.secondaryVariant,
-                        fontSize: 15,
                       ),
                     ),
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: balance),
-                      duration: const Duration(seconds: 1),
-                      builder: (context, value, child) => Text(
-                        '\$${value.toStringAsFixed(2)}',
+                  ),
+                ),
+
+                SizedBox(height: screenHeight * 0.02),
+
+                // Goals Section with Modern Cards
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: padding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Your Goals',
+                              style: TextStyle(
+                                color: AppColorScheme.onPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: screenWidth * 0.05,
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _showAddGoalSheet(context),
+                              icon: Icon(Icons.add_rounded, size: screenWidth * 0.045),
+                              label: Text(
+                                'Add Goal',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: screenWidth * 0.035,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColorScheme.accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: screenHeight * 0.015),
+                        Consumer<UserProvider>(
+                          builder: (context, userProvider, child) {
+                            if (userProvider.isLoading) {
+                              return SizedBox(
+                                height: screenHeight * 0.22,
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppColorScheme.accent,
+                                  ),
+                                ),
+                              );
+                            }
+                            
+                            if (userProvider.goals.isEmpty) {
+                              return SizedBox(
+                                height: screenHeight * 0.22,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.flag_outlined,
+                                        size: screenWidth * 0.08,
+                                        color: AppColorScheme.secondaryVariant,
+                                      ),
+                                      SizedBox(height: screenHeight * 0.01),
+                                      Text(
+                                        'No goals yet',
+                                        style: TextStyle(
+                                          color: AppColorScheme.secondaryVariant,
+                                          fontSize: screenWidth * 0.035,
+                                        ),
+                                      ),
+                                      SizedBox(height: screenHeight * 0.005),
+                                      Text(
+                                        'Add your first goal to get started!',
+                                        style: TextStyle(
+                                          color: AppColorScheme.secondaryVariant,
+                                          fontSize: screenWidth * 0.03,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                            
+                            return SizedBox(
+                              height: screenHeight * 0.22,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: userProvider.goals.length,
+                                separatorBuilder: (_, __) => SizedBox(width: screenWidth * 0.04),
+                                itemBuilder: (context, i) {
+                                  final goal = userProvider.goals[i];
+                                  return _ModernGoalCard(
+                                    name: goal.name,
+                                    progress: null, // will be calculated in the card
+                                    price: goal.targetAmount,
+                                    emoji: goal.emoji,
+                                    screenWidth: screenWidth,
+                                    screenHeight: screenHeight,
+                                    allGoals: userProvider.goals,
+                                    userBalance: userProvider.balance,
+                                    goalIndex: i,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: screenHeight * 0.03),
+
+                // Featured Content Section
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Consumer2<LessonProvider, EpisodeProvider>(
+                    builder: (context, lessonProvider, episodeProvider, child) {
+                      final featuredLessons = lessonProvider.lessons.take(3).toList();
+                      final featuredEpisodes = episodeProvider.episodes.take(2).toList();
+                      
+                      return Padding(
+                        padding: EdgeInsets.symmetric(horizontal: padding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Featured Content',
+                                  style: TextStyle(
+                                    color: AppColorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: screenWidth * 0.05,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const LessonsScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    'View All',
+                                    style: TextStyle(
+                                      color: AppColorScheme.accent,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: screenWidth * 0.035,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: screenHeight * 0.015),
+                            
+                            // Featured Lessons
+                            if (featuredLessons.isNotEmpty) ...[
+                              Text(
+                                'Popular Lessons',
+                                style: TextStyle(
+                                  color: AppColorScheme.secondaryVariant,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: screenWidth * 0.04,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.01),
+                              SizedBox(
+                                height: screenHeight * 0.20,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: featuredLessons.length,
+                                  separatorBuilder: (_, __) => SizedBox(width: screenWidth * 0.04),
+                                  itemBuilder: (context, index) {
+                                    final lesson = featuredLessons[index];
+                                    return _ContentCard(
+                                      title: lesson['title'] ?? 'Untitled',
+                                      subtitle: lesson['subtitle'] ?? 'Learn something new',
+                                      emoji: lesson['emoji'] ?? '📚',
+                                      type: 'lesson',
+                                      screenWidth: screenWidth,
+                                      screenHeight: screenHeight,
+                                      onTap: () {
+                                        if (widget.onNavigateToLessons != null) {
+                                          widget.onNavigateToLessons!();
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.02),
+                            ],
+                            
+                            // Featured Episodes
+                            if (featuredEpisodes.isNotEmpty) ...[
+                              Text(
+                                'Interactive Stories',
+                                style: TextStyle(
+                                  color: AppColorScheme.secondaryVariant,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: screenWidth * 0.04,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.01),
+                              SizedBox(
+                                height: screenHeight * 0.20,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: featuredEpisodes.length,
+                                  separatorBuilder: (_, __) => SizedBox(width: screenWidth * 0.04),
+                                  itemBuilder: (context, index) {
+                                    final episode = featuredEpisodes[index];
+                                    return _ContentCard(
+                                      title: episode['title'] ?? 'Untitled',
+                                      subtitle: episode['subtitle'] ?? 'Interactive story',
+                                      emoji: episode['emoji'] ?? '📺',
+                                      type: 'episode',
+                                      screenWidth: screenWidth,
+                                      screenHeight: screenHeight,
+                                      onTap: () {
+                                        if (widget.onNavigateToLessons != null) {
+                                          widget.onNavigateToLessons!();
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                SizedBox(height: screenHeight * 0.03),
+
+                // Quick Actions Grid
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: padding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Quick Actions',
+                          style: TextStyle(
+                            color: AppColorScheme.onPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: screenWidth * 0.05,
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.015),
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: screenWidth * 0.04,
+                          mainAxisSpacing: screenWidth * 0.04,
+                          childAspectRatio: 1.15,
+                          children: [
+                            _QuickActionCard(
+                              title: 'AI Chat',
+                              subtitle: 'Get financial advice',
+                              icon: Icons.smart_toy_rounded,
+                              color: AppColorScheme.accent,
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                if (widget.onNavigateToChat != null) {
+                                  widget.onNavigateToChat!();
+                                }
+                              },
+                            ),
+                            _QuickActionCard(
+                              title: 'Learn',
+                              subtitle: 'Explore lessons & stories',
+                              icon: Icons.school_rounded,
+                              color: AppColorScheme.accent,
+                              screenWidth: screenWidth,
+                              screenHeight: screenHeight,
+                              onTap: () {
+                                if (widget.onNavigateToLessons != null) {
+                                  widget.onNavigateToLessons!();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: screenHeight * 0.04),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<double?> _showAmountDialog(BuildContext context, String title) async {
+    final controller = TextEditingController();
+    return showDialog<double>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Amount'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ButtonStyle(
+                backgroundColor:  MaterialStateProperty.all(AppColorScheme.accentVariant),
+              ),
+              onPressed: () {
+                final value = double.tryParse(controller.text);
+                if (value != null && value > 0) {
+                  Navigator.pop(context, value);
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ModernGoalCard extends StatelessWidget {
+  final String name;
+  final double? progress; // now optional, calculated inside
+  final double price;
+  final String emoji;
+  final double screenWidth;
+  final double screenHeight;
+  final List<Goal> allGoals;
+  final double userBalance;
+  final int goalIndex;
+
+  const _ModernGoalCard({
+    required this.name,
+    required this.progress,
+    required this.price,
+    required this.emoji,
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.allGoals,
+    required this.userBalance,
+    required this.goalIndex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Calculate currentAmount for this goal based on balance allocation
+    double remaining = userBalance;
+    double currentAmount = 0;
+    for (int i = 0; i <= goalIndex; i++) {
+      final target = allGoals[i].targetAmount;
+      if (i == goalIndex) {
+        currentAmount = remaining >= target ? target : (remaining > 0 ? remaining : 0);
+      }
+      remaining -= target;
+    }
+    final double computedProgress = price > 0 ? (currentAmount / price).clamp(0.0, 1.0) : 0.0;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(screenWidth * 0.05),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(name),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Target Amount: \$${price.toStringAsFixed(2)}'),
+                  Text('Progress: ${(computedProgress * 100).toStringAsFixed(1)}%'),
+                  Text('Allocated: \$${currentAmount.toStringAsFixed(2)}'),
+                  Text('Emoji: $emoji'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStatePropertyAll(AppColorScheme.accent),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        child: Container(
+          width: screenWidth * 0.35,
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(screenWidth * 0.05),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    emoji,
+                    style: TextStyle(fontSize: screenWidth * 0.06),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.02,
+                      vertical: screenHeight * 0.005,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColorScheme.accent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(screenWidth * 0.02),
+                    ),
+                    child: Text(
+                      '${(computedProgress * 100).toInt()}%',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.03,
+                        fontWeight: FontWeight.bold,
+                        color: AppColorScheme.accent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: screenHeight * 0.01),
+              SizedBox(
+                width: screenWidth * 0.15,
+                height: screenWidth * 0.15,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: screenWidth * 0.15,
+                      height: screenWidth * 0.15,
+                      child: CircularProgressIndicator(
+                        value: computedProgress,
+                        strokeWidth: 6,
+                        backgroundColor: AppColorScheme.accent.withOpacity(0.1),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColorScheme.accent),
+                      ),
+                    ),
+                    Text(
+                      emoji,
+                      style: TextStyle(fontSize: screenWidth * 0.05),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.01),
+              Text(
+                name,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColorScheme.onPrimary,
+                  fontSize: screenWidth * 0.035,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: screenHeight * 0.005),
+              Text(
+                '\$${price.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColorScheme.secondaryVariant,
+                  fontSize: screenWidth * 0.03,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ContentCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String emoji;
+  final String type;
+  final double screenWidth;
+  final double screenHeight;
+  final VoidCallback onTap;
+
+  const _ContentCard({
+    required this.title,
+    required this.subtitle,
+    required this.emoji,
+    required this.type,
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isEpisode = type == 'episode';
+    final accentColor = isEpisode ? AppColorScheme.primary : AppColorScheme.accent;
+    
+    return Container(
+      width: screenWidth * 0.5,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(screenWidth * 0.04),
+          child: Container(
+            padding: EdgeInsets.all(screenWidth * 0.04),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(screenWidth * 0.04),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.grey.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(screenWidth * 0.02),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.025),
+                      ),
+                      child: Text(
+                        emoji,
+                        style: TextStyle(fontSize: screenWidth * 0.05),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth * 0.02),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.015,
+                        vertical: screenHeight * 0.003,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.015),
+                      ),
+                      child: Text(
+                        isEpisode ? 'Episode' : 'Lesson',
                         style: TextStyle(
-                          color: AppColorScheme.accent,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -1.5,
+                          fontSize: screenWidth * 0.025,
+                          fontWeight: FontWeight.w600,
+                          color: accentColor,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Goals Section: Horizontal Scroll with Progress Rings
-            Padding(
-              padding: const EdgeInsets.only(left: 24, right: 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Your Goals',
-                    style: TextStyle(
-                      color: AppColorScheme.secondary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 150,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: goals.length + 1,
-                      separatorBuilder: (_, __) => const SizedBox(width: 16),
-                      itemBuilder: (context, i) {
-                        if (i == goals.length) {
-                          // Add extra space at the end to prevent overflow
-                          return const SizedBox(width: 24);
-                        }
-                        final goal = goals[i];
-                        return _GoalCard(
-                          name: goal['name'],
-                          progress: goal['progress'],
-                          price: goal['price'],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Quick Actions
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: quickActions.map((action) {
-                  return _QuickActionPill(
-                    label: action['label']!,
-                    icon: action['icon']!,
-                    onTap: () {
-                      if (action['label'] == 'Add Goal') {
-                        _showAddGoalSheet(context);
-                      } else if (action['label'] == 'Content Demo') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ContentDemoScreen(),
-                          ),
-                        );
-                      }
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Lessons/Stories Carousel
-            // (Removed demo/filler content)
-            // Episodes Carousel
-            // (Removed demo/filler content)
-            const SizedBox(height: 48),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GoalCard extends StatelessWidget {
-  final String name;
-  final double progress;
-  final double price;
-  const _GoalCard(
-      {required this.name, required this.progress, required this.price});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 120,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 48,
-                height: 48,
-                child: CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 6,
-                  backgroundColor:
-                      AppColorScheme.primaryVariant.withOpacity(0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColorScheme.accent),
-                ),
-              ),
-              Text('${(progress * 100).toInt()}%',
+                SizedBox(height: screenHeight * 0.01),
+                Text(
+                  title,
                   style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColorScheme.secondary)),
-            ],
+                    color: AppColorScheme.onPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: screenWidth * 0.04,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: screenHeight * 0.005),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AppColorScheme.secondaryVariant,
+                    fontSize: screenWidth * 0.03,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            name,
-            style: TextStyle(
-                fontWeight: FontWeight.w600, color: AppColorScheme.secondary),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '\$${price.toStringAsFixed(0)}',
-            style: TextStyle(
-                fontWeight: FontWeight.w400,
-                color: AppColorScheme.secondaryVariant,
-                fontSize: 13),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _QuickActionPill extends StatelessWidget {
-  final String label;
-  final String icon;
-  final VoidCallback onTap;
-  const _QuickActionPill(
-      {required this.label, required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColorScheme.primaryVariant,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(_iconFromString(icon), color: AppColorScheme.accent, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: AppColorScheme.secondary,
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _iconFromString(String iconName) {
-    switch (iconName) {
-      case 'add_circle_outline':
-        return Icons.add_circle_outline;
-      case 'remove_circle_outline':
-        return Icons.remove_circle_outline;
-      case 'smart_toy_outlined':
-        return Icons.smart_toy_outlined;
-      default:
-        return Icons.circle;
-    }
-  }
-}
-
-class _LessonCard extends StatelessWidget {
-  final String emoji;
+class _QuickActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  const _LessonCard(
-      {required this.emoji, required this.title, required this.subtitle});
+  final IconData icon;
+  final Color color;
+  final double screenWidth;
+  final double screenHeight;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 32),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: AppColorScheme.secondary,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+        child: Container(
+          padding: EdgeInsets.all(screenWidth * 0.04),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(screenWidth * 0.04),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.1),
+              width: 1,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: AppColorScheme.secondaryVariant,
-              fontWeight: FontWeight.w400,
-              fontSize: 14,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.all(screenWidth * 0.025),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(screenWidth * 0.03),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: screenWidth * 0.06,
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.01),
+              Text(
+                title,
+                style: TextStyle(
+                  color: AppColorScheme.onPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: screenWidth * 0.04,
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.005),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppColorScheme.secondaryVariant,
+                  fontSize: screenWidth * 0.03,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
+class _BalanceActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+  const _BalanceActionButton({required this.icon, required this.color, required this.onPressed, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: Material(
+        color: color.withOpacity(0.15),
+        shape: const CircleBorder(),
+        child: IconButton(
+          icon: Icon(icon, color: color, size: 18),
+          onPressed: onPressed,
+          splashRadius: 20,
+          padding: EdgeInsets.zero,
+        ),
+      ),
+    );
+  }
+}
+
+// Keep the existing _AddGoalSheet class as is
 class _AddGoalSheet extends StatefulWidget {
   const _AddGoalSheet({Key? key}) : super(key: key);
 
@@ -407,19 +1173,41 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  void _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isSubmitting = true);
-      // Simulate a save, then pop
-      Future.delayed(const Duration(milliseconds: 600), () {
+      
+      try {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final amount = double.parse(_amountController.text);
+        
+        await userProvider.addGoal(
+          _nameController.text.trim(),
+          amount,
+          null, // No due date for now
+        );
+        
         Navigator.of(context).pop();
-      });
+      } catch (e) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding goal: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
+    final screenWidth = mq.size.width;
+    final screenHeight = mq.size.height;
+    
     return AnimatedPadding(
       duration: const Duration(milliseconds: 200),
       padding: mq.viewInsets,
@@ -428,7 +1216,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(screenWidth * 0.09)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -437,16 +1225,21 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
               ),
             ],
           ),
-          padding: const EdgeInsets.fromLTRB(32, 32, 32, 32),
+          padding: EdgeInsets.fromLTRB(
+            screenWidth * 0.08,
+            screenHeight * 0.03,
+            screenWidth * 0.08,
+            screenHeight * 0.03,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 48,
-                  height: 6,
-                  margin: const EdgeInsets.only(bottom: 24),
+                  width: screenWidth * 0.12,
+                  height: screenHeight * 0.006,
+                  margin: EdgeInsets.only(bottom: screenHeight * 0.02),
                   decoration: BoxDecoration(
                     color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(3),
@@ -455,12 +1248,12 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                 Text(
                   'Add a New Goal',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: screenWidth * 0.055,
                     fontWeight: FontWeight.bold,
                     color: AppColorScheme.secondary,
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: screenHeight * 0.02),
                 GestureDetector(
                   onTap: () async {
                     // Show emoji picker (simple for now)
@@ -468,15 +1261,15 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                     final selected = await showModalBottomSheet<String>(
                       context: context,
                       backgroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(screenWidth * 0.06)),
                       ),
                       builder: (context) => GridView.count(
                         crossAxisCount: 5,
                         shrinkWrap: true,
                         children: emojis.map((e) => InkWell(
                           onTap: () => Navigator.of(context).pop(e),
-                          child: Center(child: Text(e, style: const TextStyle(fontSize: 28))),
+                          child: Center(child: Text(e, style: TextStyle(fontSize: screenWidth * 0.07))),
                         )).toList(),
                       ),
                     );
@@ -487,36 +1280,36 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                       color: AppColorScheme.accent.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
-                    padding: const EdgeInsets.all(18),
-                    child: Text(_emoji, style: const TextStyle(fontSize: 36)),
+                    padding: EdgeInsets.all(screenWidth * 0.045),
+                    child: Text(_emoji, style: TextStyle(fontSize: screenWidth * 0.09)),
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: screenHeight * 0.02),
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.sentences,
                   cursorColor: AppColorScheme.accent,
                   decoration: InputDecoration(
                     labelText: 'Goal Name',
-                    prefixIcon: const Icon(Icons.flag_outlined),
+                    prefixIcon: Icon(Icons.flag_outlined, size: screenWidth * 0.05),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(screenWidth * 0.04),
                     ),
                     filled: true,
                     fillColor: Colors.grey[50],
                   ),
                   validator: (v) => v == null || v.trim().isEmpty ? 'Enter a goal name' : null,
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: screenHeight * 0.015),
                 TextFormField(
                   controller: _amountController,
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   cursorColor: AppColorScheme.accent,
                   decoration: InputDecoration(
                     labelText: 'Target Amount',
-                    prefixIcon: const Icon(Icons.attach_money_rounded),
+                    prefixIcon: Icon(Icons.attach_money_rounded, size: screenWidth * 0.05),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(screenWidth * 0.04),
                     ),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -528,7 +1321,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: screenHeight * 0.025),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -536,18 +1329,21 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColorScheme.accent,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.015),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.04),
                       ),
-                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      textStyle: TextStyle(
+                        fontSize: screenWidth * 0.045,
+                        fontWeight: FontWeight.bold,
+                      ),
                       elevation: 2,
                     ),
                     child: _isSubmitting
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        ? SizedBox(
+                            width: screenWidth * 0.06,
+                            height: screenWidth * 0.06,
+                            child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Add Goal'),
                   ),

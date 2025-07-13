@@ -60,227 +60,268 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+    final isTablet = screenWidth > 600;
+    final isSmallScreen = screenHeight < 700;
+    
+    // Responsive sizing
+    final horizontalPadding = isTablet ? 48.0 : 24.0;
+    final logoSize = isTablet ? 160.0 : (isSmallScreen ? 80.0 : 120.0);
+    final iconSize = isTablet ? 80.0 : (isSmallScreen ? 40.0 : 60.0);
+    final titleFontSize = isTablet ? 48.0 : (isSmallScreen ? 28.0 : 36.0);
+    final taglineFontSize = isTablet ? 22.0 : (isSmallScreen ? 16.0 : 18.0);
+    final buttonHeight = isTablet ? 64.0 : (isSmallScreen ? 48.0 : 56.0);
+    final featureIconSize = isTablet ? 56.0 : (isSmallScreen ? 40.0 : 48.0);
+    final featureIconInnerSize = isTablet ? 28.0 : (isSmallScreen ? 20.0 : 24.0);
+
     return Scaffold(
       backgroundColor: AppColorScheme.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              // Top section with logo and tagline
-              Expanded(
-                flex: 3,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // App Logo/Icon
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: AppColorScheme.accent,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColorScheme.accent.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          size: 60,
-                          color: AppColorScheme.onAccent,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // App Name
-                      const Text(
-                        'Budget Buddy',
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: AppColorScheme.secondary,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Tagline
-                      const Text(
-                        'Entertainment that moves you forward.',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          color: AppColorScheme.secondaryVariant,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              // Middle section with features
-              Expanded(
-                flex: 2,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    children: [
-                      _buildFeatureItem(
-                        icon: Icons.trending_up_rounded,
-                        title: 'Budget Tracker',
-                        subtitle: 'Insightful budget tracker to help you hit your goals',
-                      ),
-                      const SizedBox(height: 18),
-                      _buildFeatureItem(
-                        icon: Icons.psychology_rounded,
-                        title: 'Entertaining Education',
-                        subtitle: 'Learn the essentials of finance through short stories',
-                      ),
-                      const SizedBox(height: 18),
-                      _buildFeatureItem(
-                        icon: Icons.chat_bubble_outline,
-                        title: 'Personal Tutor',
-                        subtitle: 'AI Chatbot catered to your questions and needs',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              // Bottom section with buttons
-              Expanded(
-                flex: 2,
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Get Started Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Navigate to signup screen
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SignupScreen(),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColorScheme.accent,
-                            foregroundColor: AppColorScheme.onAccent,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text(
-                            'Get Started',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Sign In Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            // Navigate to sign in screen
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColorScheme.secondary,
-                            side: const BorderSide(
-                              color: AppColorScheme.secondary,
-                              width: 2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text(
-                            'I already have an account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Terms and Privacy
-                      Row(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: Column(
+                children: [
+                  // Top section with logo and tagline
+                  SizedBox(
+                    height: screenHeight * (isSmallScreen ? 0.25 : 0.35),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          // App Logo/Icon
+                          Container(
+                            width: logoSize,
+                            height: logoSize,
+                            decoration: BoxDecoration(
+                              color: AppColorScheme.accent,
+                              borderRadius: BorderRadius.circular(logoSize * 0.25),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColorScheme.accent.withOpacity(0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.school_rounded,
+                              size: iconSize,
+                              color: AppColorScheme.onAccent,
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 16 : 32),
+                          
+                          // App Name
                           Text(
-                            'By continuing, you agree to our ',
+                            'Budget Buddy',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: AppColorScheme.secondaryVariant,
+                              fontSize: titleFontSize,
+                              fontWeight: FontWeight.bold,
+                              color: AppColorScheme.secondary,
+                              letterSpacing: -0.5,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              // Navigate to terms
-                            },
-                            child: Text(
-                              'Terms',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColorScheme.accent,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
+                          SizedBox(height: isSmallScreen ? 8 : 16),
+                          
+                          // Tagline
                           Text(
-                            ' and ',
+                            'Entertainment that moves you forward.',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: taglineFontSize,
+                              fontWeight: FontWeight.w500,
                               color: AppColorScheme.secondaryVariant,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              // Navigate to privacy
-                            },
-                            child: Text(
-                              'Privacy Policy',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColorScheme.accent,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  
+                  // Middle section with features
+                  SizedBox(
+                    height: screenHeight * (isSmallScreen ? 0.37 : 0.27),
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildFeatureItem(
+                            icon: Icons.trending_up_rounded,
+                            title: 'Budget Tracker',
+                            subtitle: 'Insightful budget tracker to help you hit your goals',
+                            iconSize: featureIconSize,
+                            innerIconSize: featureIconInnerSize,
+                            isTablet: isTablet,
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 18),
+                          _buildFeatureItem(
+                            icon: Icons.psychology_rounded,
+                            title: 'Entertaining Education',
+                            subtitle: 'Learn the essentials of finance through short stories',
+                            iconSize: featureIconSize,
+                            innerIconSize: featureIconInnerSize,
+                            isTablet: isTablet,
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 18),
+                          _buildFeatureItem(
+                            icon: Icons.chat_bubble_outline,
+                            title: 'Personal Tutor',
+                            subtitle: 'AI Chatbot catered to your questions and needs',
+                            iconSize: featureIconSize,
+                            innerIconSize: featureIconInnerSize,
+                            isTablet: isTablet,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Bottom section with buttons
+                  SizedBox(
+                    height: screenHeight * (isSmallScreen ? 0.25 : 0.3),
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Get Started Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: buttonHeight,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // Navigate to signup screen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SignupScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColorScheme.accent,
+                                foregroundColor: AppColorScheme.onAccent,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Text(
+                                'Get Started',
+                                style: TextStyle(
+                                  fontSize: isTablet ? 20 : (isSmallScreen ? 16 : 18),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 16),
+                          
+                          // Sign In Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: buttonHeight,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                // Navigate to sign in screen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LoginScreen(),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColorScheme.secondary,
+                                side: const BorderSide(
+                                  color: AppColorScheme.secondary,
+                                  width: 2,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Text(
+                                'I already have an account',
+                                style: TextStyle(
+                                  fontSize: isTablet ? 18 : (isSmallScreen ? 14 : 16),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 16 : 24),
+                          
+                          // Terms and Privacy
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: isTablet ? 32 : 0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'By continuing, you agree to our ',
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 14 : 12,
+                                      color: AppColorScheme.secondaryVariant,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    // Navigate to terms
+                                  },
+                                  child: Text(
+                                    'Terms',
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 14 : 12,
+                                      color: AppColorScheme.accent,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    ' and ',
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 14 : 12,
+                                      color: AppColorScheme.secondaryVariant,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    // Navigate to privacy
+                                  },
+                                  child: Text(
+                                    'Privacy Policy',
+                                    style: TextStyle(
+                                      fontSize: isTablet ? 14 : 12,
+                                      color: AppColorScheme.accent,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -291,31 +332,34 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     required IconData icon,
     required String title,
     required String subtitle,
+    required double iconSize,
+    required double innerIconSize,
+    required bool isTablet,
   }) {
     return Row(
       children: [
         Container(
-          width: 48,
-          height: 48,
+          width: iconSize,
+          height: iconSize,
           decoration: BoxDecoration(
             color: AppColorScheme.accent.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(iconSize * 0.25),
           ),
           child: Icon(
             icon,
             color: AppColorScheme.accent,
-            size: 24,
+            size: innerIconSize,
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: isTablet ? 20 : 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
+                style: TextStyle(
+                  fontSize: isTablet ? 18 : 16,
                   fontWeight: FontWeight.w600,
                   color: AppColorScheme.secondary,
                 ),
@@ -323,8 +367,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: TextStyle(
+                  fontSize: isTablet ? 16 : 14,
                   color: AppColorScheme.secondaryVariant,
                 ),
               ),

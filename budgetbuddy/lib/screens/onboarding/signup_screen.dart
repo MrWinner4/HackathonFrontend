@@ -1,3 +1,4 @@
+import 'package:budgetbuddy/main_nav_screen.dart';
 import 'package:budgetbuddy/screens/home/homescreen.dart';
 import 'package:flutter/material.dart';
 import '../../colorscheme.dart';
@@ -142,20 +143,20 @@ class _SignupScreenState extends State<SignupScreen>
 
     try {
       // Firebase signup
-      final registered = await ApiService().registerUser(
-        _nameController.text.trim(),
-        _emailController.text.trim(),
-      );
       await FirebaseService().signUpWithEmail(
         _emailController.text.trim(),
         _passwordController.text.trim(),
+      );
+      final registered = await ApiService().registerUser(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
       );
       // Backend registration
       if (!registered) {
         throw Exception('Backend registration failed');
       }
       if (mounted) {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const MainNavScreen()));
       }
     } catch (e) {
       if (mounted) {

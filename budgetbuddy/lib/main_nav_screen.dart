@@ -13,13 +13,37 @@ class MainNavScreen extends StatefulWidget {
 
 class _MainNavScreenState extends State<MainNavScreen> {
   int _selectedIndex = 0;
+  late List<Widget> _pages;
 
-  final List<Widget> _pages = [
-    const HomeScreen(),
-    const ChatbotPage(),
-    const LessonsScreen(),
-    const ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      HomeScreen(
+        onNavigateToChat: _goToChat,
+        onNavigateToLessons: _goToLessons,
+      ),
+      const ChatbotPage(),
+      const LessonsScreen(),
+      const ProfileScreen(),
+    ];
+  }
+
+  void _goToHome() {
+    setState(() => _selectedIndex = 0); // Example: 1 = Lessons tab
+  }
+
+  void _goToChat() {
+    setState(() => _selectedIndex = 1); // Example: 2 = Chat tab
+  }
+
+  void _goToLessons() {
+    setState(() => _selectedIndex = 2); // Example: 1 = Lessons tab
+  }
+
+  void _goToSettings() {
+    setState(() => _selectedIndex = 3); // Example: 3 = Progress tab
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,25 +67,21 @@ class _MainNavScreenState extends State<MainNavScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavBarIcon(
-                  icon: Icons.home_rounded,
-                  selected: _selectedIndex == 0,
-                  onTap: () => setState(() => _selectedIndex = 0),
-                ),
+                    icon: Icons.home_rounded,
+                    selected: _selectedIndex == 0,
+                    onTap: _goToHome),
                 _NavBarIcon(
-                  icon: Icons.smart_toy_rounded,
-                  selected: _selectedIndex == 1,
-                  onTap: () => setState(() => _selectedIndex = 1),
-                ),
+                    icon: Icons.smart_toy_rounded,
+                    selected: _selectedIndex == 1,
+                    onTap: _goToChat),
                 _NavBarIcon(
-                  icon: Icons.menu_book_rounded,
-                  selected: _selectedIndex == 2,
-                  onTap: () => setState(() => _selectedIndex = 2),
-                ),
+                    icon: Icons.menu_book_rounded,
+                    selected: _selectedIndex == 2,
+                    onTap: _goToLessons),
                 _NavBarIcon(
-                  icon: Icons.settings_rounded,
-                  selected: _selectedIndex == 3,
-                  onTap: () => setState(() => _selectedIndex = 3),
-                ),
+                    icon: Icons.settings_rounded,
+                    selected: _selectedIndex == 3,
+                    onTap: _goToSettings),
               ],
             ),
           ),
@@ -75,7 +95,8 @@ class _NavBarIcon extends StatelessWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
-  const _NavBarIcon({required this.icon, required this.selected, required this.onTap});
+  const _NavBarIcon(
+      {required this.icon, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

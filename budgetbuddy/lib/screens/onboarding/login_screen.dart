@@ -1,3 +1,4 @@
+import 'package:budgetbuddy/main_nav_screen.dart';
 import 'package:budgetbuddy/screens/home/homescreen.dart';
 import 'package:flutter/material.dart';
 import '../../colorscheme.dart';
@@ -107,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const MainNavScreen()),
         );
       } else {
         throw Exception('Login failed');

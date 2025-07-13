@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
+import '../../services/api_service.dart';
 import '../../widgets/content/page_viewer.dart';
 import '../../colorscheme.dart';
 
@@ -11,9 +11,7 @@ class ContentDemoScreen extends StatefulWidget {
 }
 
 class _ContentDemoScreenState extends State<ContentDemoScreen> {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:8000',
-  ));
+  final ApiService _apiService = ApiService();
 
   bool _isLoading = false;
 
@@ -385,7 +383,7 @@ Income - Expenses = Savings (or Debt)
     });
 
     try {
-      final response = await _dio.post(
+      final response = await _apiService.post(
         '/stories/generate',
         data: {'topic': topic, 'content_type': 'story'},
       );

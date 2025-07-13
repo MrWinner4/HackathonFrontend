@@ -8,6 +8,10 @@ import 'screens/home/homescreen.dart';
 import 'main_nav_screen.dart';
 import 'package:provider/provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/lesson_provider.dart';
+import 'providers/episode_provider.dart';
+import 'providers/progress_provider.dart';
+import 'providers/user_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +28,10 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => LessonProvider()),
+        ChangeNotifierProvider(create: (_) => EpisodeProvider()),
+        ChangeNotifierProvider(create: (_) => ProgressProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
       child: MaterialApp(
         title: 'Budget Buddy',

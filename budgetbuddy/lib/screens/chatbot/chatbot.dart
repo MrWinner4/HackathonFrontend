@@ -123,6 +123,45 @@ class _ChatbotPageState extends State<ChatbotPage> {
                     ),
                   ),
                   // Clear chat button
+                  Consumer<ChatProvider>(
+                    builder: (context, chatProvider, child) {
+                      return chatProvider.messages.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Clear Chat History'),
+                                    content: const Text('Are you sure you want to clear all messages? This action cannot be undone.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          _clearChat();
+                                          Navigator.of(context).pop();
+                                        },
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        child: const Text('Clear'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              icon: Icon(
+                                Icons.history,
+                                color: AppColorScheme.secondaryVariant,
+                                size: 24,
+                              ),
+                              tooltip: 'Clear chat history',
+                            )
+                          : const SizedBox.shrink();
+                    },
+                  ),
                 ],
               ),
             ),
